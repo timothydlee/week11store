@@ -66,7 +66,7 @@ function displayItems() {
 					{hAlign: "center", content: res[i].product_id}, 
 					res[i].product_name, 
 					res[i].department_name, 
-					{hAlign: "right", content: res[i].price.toFixed(2)},
+					{hAlign: "right", content: "$" + res[i].price.toFixed(2)},
 					{hAlign: "right", content: res[i].stock_quantity}
 				]);
 			}
@@ -139,7 +139,7 @@ function userPrompt() {
 				var customerPrice = quantity * price;
 				//Product ID # of the item the user selected
 				var product_id = compare[compareIndex].product_id;
-				console.log("Thank you! " + quantity + " of those costs " + customerPrice.toFixed(2));
+				console.log("Thank you! " + quantity + " of those cost $" + customerPrice.toFixed(2) + ". Thank you for your purchase!");
 				//New stock of the item less the amount that the user purchased
 				var newStock = compareStock - quantityResponse.quantity;
 				//Calls the updateDB function passing in the newStock amount and corresponding product ID

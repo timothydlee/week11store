@@ -4,6 +4,7 @@ var mysql = require("mysql");
 var inquirer = require("inquirer");
 var prompt = require("prompt");
 var Table = require("cli-table2");
+var clc = require("cli-color");
 
 //Instantiating the database config information to connect to SQL
 var connection = mysql.createConnection({
@@ -17,11 +18,11 @@ var connection = mysql.createConnection({
 var table = new Table({
 	//Labeling heads of each column
 	head: [
-		{hAlign: "center", content: "ID"}, 
-		"Item", 
-		"Department", 
-		{hAlign: "center", content: "Price"}, 
-		{hAlign: "center", content: "Stock"}
+		{hAlign: "center", content: clc.white("ID")}, 
+		clc.white("Item"), 
+		clc.white("Department"), 
+		{hAlign: "center", content: clc.white("Price")}, 
+		{hAlign: "center", content: clc.white("Stock")}
 	],
 	//Setting width of each column
 	colWidths: [5, 25, 25, 10, 10],
@@ -50,6 +51,38 @@ connection.connect(function(err) {
  	// console.log("connected as id: " + connection.threadId);
 });
 
+//Function that displays end message and closes the datbase connection
+function exit() {
+	console.log("Thanks for using BamazonManager!");
+	connection.end();
+}
+
+//Function that displays main user interface. Provides list of tasks for user to to perform
+function mainDisplay() {
+	//Prompts the user with a list of options
+	inquirer.prompt(
+		{
+			type: "list",
+			name: "selection",
+			message: "What would you like to do?",
+			choices: ["Display All Inventory", "View Low Inventory", "Exit"]
+		}
+	).then(function(response) {
+		//Switch case to handle the various responses
+		switch(response.selection) {
+			case "Display All Inventory":
+				displayItems();
+				break;
+			case "View Low Inventory":
+				viewLowInventory();
+				break;
+			case "Exit":
+				exit();
+				break;
+		}
+	})
+}
+
 
 //Function that displays items if there is any stock of that item left
 function displayItems() {
@@ -59,18 +92,68 @@ function displayItems() {
 		if (err) throw err;
 		//Loops through the res, which is contained in an array
 		for(var i = 0; i<res.length; i++) {
-			//Stock has to be greater than 0 in order for the customer to see an available item
-			//Pushing to instance of table array
-			table.push([
-				{hAlign: "center", content: res[i].product_id}, 
-				res[i].product_name, 
-				res[i].department_name, 
-				{hAlign: "right", content: "$" + res[i].price.toFixed(2)},
-				{hAlign: "right", content: res[i].stock_quantity}
-			]);
+			//Used cli-color to highlight rows that were lower than 100 in quantity with red to alert the manager.
+			if(res[i].stock_quantity<=100 && res[i].stock_quantity != 0){
+				table.push([
+					{hAlign: "center", content: clc.yellow(res[i].product_id)}, 
+					clc.yellow(res[i].product_name), 
+					clc.yellow(res[i].department_name), 
+					{hAlign: "right", content: clc.yellow("$" + (res[i].price.toFixed(2)))},
+					{hAlign: "right", content: clc.yellow(res[i].stock_quantity)}
+				]);
+			//For items out of stock, the row will display as red
+			} else if(res[i].stock_quantity === 0) {
+				table.push([
+					{hAlign: "center", content: clc.red(res[i].product_id)}, 
+					clc.red(res[i].product_name), 
+					clc.red(res[i].department_name), 
+					{hAlign: "right", content: clc.red("$" + (res[i].price.toFixed(2)))},
+					{hAlign: "right", content: clc.red(res[i].stock_quantity)}
+				]);	
+			//For all items that are well stocked, the row will display in cyan
+			} else {
+				table.push([
+					{hAlign: "center", content: clc.cyan(res[i].product_id)}, 
+					clc.cyan(res[i].product_name), 
+					clc.cyan(res[i].department_name), 
+					{hAlign: "right", content: clc.cyan("$" + res[i].price.toFixed(2))},
+					{hAlign: "right", content: clc.cyan(res[i].stock_quantity)}
+				]);
+			}
 		}
+		console.log(clc.yellow("\nRows highlighted in yellow are low in inventory.\nRows highlighted in red are out of stock."));
 		//Prints the table
 		console.log(table.toString());
+		//Calls back to the selection menu
+		mainDisplay();
+	})
+}
+
+function viewLowInventory() {
+	connection.query("SELECT * FROM products WHERE stock_quantity < 100", function(err, res) {
+		if (err) throw err;
+		for(var i = 0; i<res.length; i++){
+			if(res[i].stock_quantity === 0){
+				table.push([
+					{hAlign: "center", content: clc.red(res[i].product_id)}, 
+					clc.red(res[i].product_name), 
+					clc.red(res[i].department_name), 
+					{hAlign: "right", content: clc.red("$" + res[i].price.toFixed(2))},
+					{hAlign: "right", content: clc.red(res[i].stock_quantity)}
+				])
+			} else {
+				table.push([
+					{hAlign: "center", content: res[i].product_id}, 
+					res[i].product_name, 
+					res[i].department_name, 
+					{hAlign: "right", content: "$" + res[i].price.toFixed(2)},
+					{hAlign: "right", content: res[i].stock_quantity}
+				])				
+			}
+		}
+		console.log(clc.yellow("\nRows in red are items that are out of stock."));
+		console.log(table.toString());
+		mainDisplay();
 	})
 }
 
@@ -156,6 +239,4 @@ function updateDB(newNumber, id) {
 }
 
 //Starts program
-displayItems();
-//Ends the connection
-connection.end();
+mainDisplay();

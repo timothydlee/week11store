@@ -50,6 +50,10 @@ connection.connect(function(err) {
  	// console.log("connected as id: " + connection.threadId);
 });
 
+function exit() {
+	console.log("Thanks for shopping at Bamazon!");
+	connection.end();
+}
 
 //Function that displays items if there is any stock of that item left
 function displayItems() {
@@ -139,7 +143,7 @@ function userPrompt() {
 				var customerPrice = quantity * price;
 				//Product ID # of the item the user selected
 				var product_id = compare[compareIndex].product_id;
-				console.log("Thank you! " + quantity + " of those cost $" + customerPrice.toFixed(2) + ". Thank you for your purchase!");
+				console.log("Thank you! " + quantity + " of those costs $" + customerPrice.toFixed(2) + ". Thank you for your purchase!");
 				//New stock of the item less the amount that the user purchased
 				var newStock = compareStock - quantityResponse.quantity;
 				//Calls the updateDB function passing in the newStock amount and corresponding product ID
@@ -156,7 +160,7 @@ function updateDB(newNumber, id) {
 	connection.query("UPDATE products SET stock_quantity=? WHERE product_id = ?", [newNumber, id], function(err, res) {
 		if (err) throw err;
 		//Ends the connection
-		connection.end();
+		exit();
 	})
 }
 

@@ -47,7 +47,7 @@ var table = new Table({
 //Creating connection to database hosting data using MYSQL NPM package
 connection.connect(function(err) {
 	if (err) throw err;
- 	console.log("connected as id: " + connection.threadId);
+ 	// console.log("connected as id: " + connection.threadId);
 });
 
 

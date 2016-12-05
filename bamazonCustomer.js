@@ -1,9 +1,9 @@
 //Requiring various keys and NPM packages
-var keys = require("./keys.js");
-var mysql = require("mysql");
-var inquirer = require("inquirer");
-var prompt = require("prompt");
-var Table = require("cli-table2");
+var keys 		= require("./keys.js");
+var mysql 		= require("mysql");
+var inquirer 	= require("inquirer");
+var prompt 		= require("prompt");
+var Table 		= require("cli-table2");
 
 //Instantiating the database config information to connect to SQL
 var connection = mysql.createConnection({
@@ -41,8 +41,9 @@ var table = new Table({
 		'mid': '─' , 'mid-mid': '┼',
 		'right': '║' ,
 		'right-mid': '╢' , 
-		'middle': '│' }
-	});
+		'middle': '│' 
+	}
+});
 
 //Creating connection to database hosting data using MYSQL NPM package
 connection.connect(function(err) {
@@ -121,7 +122,7 @@ function userPrompt() {
 				//Included validation of the input
 				validate: function(value) {
 					//input must be at least 0, less than or equal to stock available, and must be a number to be considered a valid input
-					if (isNaN(value) === false && value <= compareStock && value >= 0) {
+					if (isNaN(value) === false && value <= compareStock && value >= 0 && !value === false) {
 						return true;
 					//Message displays if user inputs value greater than the stock available before being reprompted
 					} else if (value > compareStock) {

@@ -1,3 +1,6 @@
+//****************************************************
+				//REQUIRING PACKAGES
+//****************************************************
 //Requiring various keys and NPM packages
 var keys 		= require("./keys.js");
 var mysql 		= require("mysql");
@@ -5,6 +8,10 @@ var inquirer 	= require("inquirer");
 var prompt 		= require("prompt");
 var Table 		= require("cli-table2");
 var clc 		= require("cli-color");
+
+//****************************************************
+				//CREATING CONNECTION
+//****************************************************
 
 //Instantiating the database config information to connect to SQL
 var connection = mysql.createConnection({
@@ -14,43 +21,15 @@ var connection = mysql.createConnection({
 	database : "Bamazon"
 });
 
-//Instantiating new instance of Table from Cli-Table2 NPM Package
-var table = new Table({
-	//Labeling heads of each column
-	head: [
-		{hAlign: "center", content: clc.white("ID")}, 
-		clc.white("Item"), 
-		clc.white("Department"), 
-		{hAlign: "center", content: clc.white("Price")}, 
-		{hAlign: "center", content: clc.white("Stock")}
-	],
-	//Setting width of each column
-	colWidths: [5, 25, 25, 10, 10],
-	//Setting a border around the table
-	chars: 
-	{ 
-		'top': '═' , 
-		'top-mid': '╤' ,
-		'top-left': '╔' ,
-		'top-right': '╗',
-		'bottom': '═' ,
-		'bottom-mid': '╧' ,
-		'bottom-left': '╚' , 
-		'bottom-right': '╝',
-		'left': '║' , 
-		'left-mid': '╟' , 
-		'mid': '─' , 'mid-mid': '┼',
-		'right': '║' ,
-		'right-mid': '╢' , 
-		'middle': '│' 
-	}
-});
-
-//Creating connection to database hosting data using MYSQL NPM package
+//Creating initial connection to database hosting data using MYSQL NPM package
 connection.connect(function(err) {
 	if (err) throw err;
  	// console.log("connected as id: " + connection.threadId);
 });
+
+//****************************************************
+				//EXIT FUNCTION
+//****************************************************
 
 //Function that displays end message and closes the datbase connection
 function exit() {
@@ -58,6 +37,12 @@ function exit() {
 	connection.end();
 }
 
+//****************************************************
+
+
+//****************************************************
+				//MAIN DISPLAY FUNCTION
+//****************************************************
 //Function that displays main user interface. Provides list of tasks for user to to perform
 function mainDisplay() {
 	//Prompts the user with a list of options
@@ -66,7 +51,7 @@ function mainDisplay() {
 			type: "list",
 			name: "selection",
 			message: "What would you like to do?",
-			choices: ["Display All Inventory", "View Low Inventory", "Add Stock to Existing Inventory", "Exit"]
+			choices: ["Display All Inventory", "View Low Inventory", "Add Stock to Existing Inventory", "Add New Product to Inventory", "Exit"]
 		}
 	).then(function(response) {
 		//Switch case to handle the various responses
@@ -80,6 +65,9 @@ function mainDisplay() {
 			case "Add Stock to Existing Inventory":
 				addToInventory();
 				break;
+			case "Add New Product to Inventory":
+				addProduct();
+				break;
 			case "Exit":
 				exit();
 				break;
@@ -89,7 +77,14 @@ function mainDisplay() {
 	})
 }
 
-//Function that displays items if there is any stock of that item left
+//****************************************************
+
+
+//****************************************************
+				//BUILD TABLE FUNCTION
+//****************************************************
+
+//Function that builds table without initiating displayMain user selection screen.
 function buildTable() {
 	//Instantiating new instance of Table from Cli-Table2 NPM Package
 	var allItems = new Table({
@@ -164,11 +159,13 @@ function buildTable() {
 	})
 }
 
+//****************************************************
+				
 
 
-
-
-
+//****************************************************
+			//DISPLAY ALL ITEMS FUNCTION
+//****************************************************
 
 //Function that displays items if there is any stock of that item left
 function displayItems() {
@@ -177,6 +174,14 @@ function displayItems() {
 	mainDisplay();
 }
 
+//****************************************************
+
+
+
+//****************************************************
+			//VIEW LOW INVENTORY FUNCTION
+//****************************************************
+//Builds a table that uses different colors to build out table with low and 0 inventory
 function viewLowInventory() {
 	//Instantiating new instance of Table from Cli-Table2 NPM Package
 	var lowItems = new Table({
@@ -209,10 +214,12 @@ function viewLowInventory() {
 			'middle': '│' 
 		}
 	});
+	//Connects to the database to receive data where the quantity is <100 units
 	connection.query("SELECT * FROM products WHERE stock_quantity <= 100", function(err, res) {
 		if (err) throw err;
 		for(var i = 0; i<res.length; i++){
 			var item = res[i];
+			//If stock quantity is 0, the row prints in red
 			if(item.stock_quantity === 0){
 				lowItems.push([
 					{hAlign: "center", content: clc.red(item.product_id)}, 
@@ -221,6 +228,7 @@ function viewLowInventory() {
 					{hAlign: "right", content: clc.red("$" + item.price.toFixed(2))},
 					{hAlign: "right", content: clc.red(item.stock_quantity)}
 				])
+			//Else, the row prints in default white
 			} else {
 				lowItems.push([
 					{hAlign: "center", content: item.product_id}, 
@@ -233,14 +241,20 @@ function viewLowInventory() {
 		}
 		console.log(clc.yellow("\nRows in red are items that are out of stock."));
 		console.log(lowItems.toString());
-		mainDisplay();
+		mainDisplay();//Calls back to the main user selection interface
 	})
 };
 
+
+//****************************************************
+		//ADD INVENTORY TO EXISTING PRODUCT 
+//****************************************************
+//Function that adds inventory to a product that already exist in the database
 function addToInventory() {
 	var idArray = [];
+	//Displays table for user to see
 	buildTable();
-
+	//Creates an array of all items for validation process
 	connection.query("SELECT * FROM products", function (err, res) {
 		if (err) throw err;
 		for(var i = 0; i < res.length; i++) {
@@ -254,6 +268,7 @@ function addToInventory() {
 			name: "id",
 			message: "ID of the product you want to add inventory to:",
 			type: "input",
+			//Validates that the number that the user inputs corresponds to an item that exists
 			validate: function(value) {
 				var flag;
 				for (var j = 0; j < idArray.length; j++) {
@@ -273,6 +288,7 @@ function addToInventory() {
 			name: "amount",
 			message: "How many of the item do you want to add?",
 			type: "input",
+			//Validates the input to make sre that the input is a number and it's not blank
 			validate: function(value) {
 				if (isNaN(value) === false && value != "") {
 					return true;
@@ -283,183 +299,124 @@ function addToInventory() {
 			}
 		}
 	]).then(function(response){
-		var productId = parseInt(response.id)
-		var productIndex = productId-1;
-		var originalQuantity = idArray[productId].stock_quantity
-		var newStock = parseInt(originalQuantity) + parseInt(response.amount);
+		var productId = parseInt(response.id) //ID Number of the item selected
+		var productIndex = productId-1; //Index position of the item selected in the context of the entire array of products in the DB
+		var originalQuantity = idArray[productIndex].stock_quantity //Variable that points to the stock_quantity of the product's original quantity
+		var newStock = parseInt(originalQuantity) + parseInt(response.amount); //Variable that adds the user's input amount and adds it to the original quantity
 		console.log("Original Stock: " + originalQuantity)
 		console.log("Added amount: " + response.amount);
 		console.log("New Stock: " + newStock);  
+		//Passes new stock quantity and product id values to updateDB function that will query SQL
 		updateDB(newStock, productId);
 	});
 }
+//****************************************************
 
-// function addToInventory() {
-// 	//Instantiating new instance of Table from Cli-Table2 NPM Package
-// 	var allItems = new Table({
-// 		//Labeling heads of each column
-// 		head: [
-// 			{hAlign: "center", content: clc.white("ID")}, 
-// 			clc.white("Item"), 
-// 			clc.white("Department"), 
-// 			{hAlign: "center", content: clc.white("Price")}, 
-// 			{hAlign: "center", content: clc.white("Stock")}
-// 		],
-// 		//Setting width of each column
-// 		colWidths: [5, 25, 25, 10, 10],
-// 		//Setting a border around the table
-// 		chars: 
-// 		{ 
-// 			'top': '═' , 
-// 			'top-mid': '╤' ,
-// 			'top-left': '╔' ,
-// 			'top-right': '╗',
-// 			'bottom': '═' ,
-// 			'bottom-mid': '╧' ,
-// 			'bottom-left': '╚' , 
-// 			'bottom-right': '╝',
-// 			'left': '║' , 
-// 			'left-mid': '╟' , 
-// 			'mid': '─' , 'mid-mid': '┼',
-// 			'right': '║' ,
-// 			'right-mid': '╢' , 
-// 			'middle': '│' 
-// 		}
-// 	});
-// 	//Selecting from the table "products" to display all items, whether stock is 0 or not
-// 	connection.query("SELECT * FROM products", function(err, res) {
-// 		//Displays error if an error occurs
-// 		if (err) throw err;
-// 		var itemsForSelection = [];
-// 		var itemsAll = [];
-// 		//Loops through the res, which is contained in an array
-// 		for(var i = 0; i<res.length; i++) {
-// 			var item = res[i];
-// 			itemsAll.push(item);
-// 			itemsForSelection.push(item.product_id + ": " + item.product_name + " || Stock: " + item.stock_quantity);
-// 			//Used cli-color to highlight rows that were lower than 100 in quantity with red to alert the manager.
-// 			if(item.stock_quantity<=100 && item.stock_quantity != 0){
-// 				allItems.push([
-// 					{hAlign: "center", content: clc.yellow(item.product_id)}, 
-// 					clc.yellow(item.product_name), 
-// 					clc.yellow(item.department_name), 
-// 					{hAlign: "right", content: clc.yellow("$" + (item.price.toFixed(2)))},
-// 					{hAlign: "right", content: clc.yellow(item.stock_quantity)}
-// 				]);
-// 			//For items out of stock, the row will display as red
-// 			} else if(item.stock_quantity === 0) {
-// 				allItems.push([
-// 					{hAlign: "center", content: clc.red(item.product_id)}, 
-// 					clc.red(item.product_name), 
-// 					clc.red(item.department_name), 
-// 					{hAlign: "right", content: clc.red("$" + (item.price.toFixed(2)))},
-// 					{hAlign: "right", content: clc.red(item.stock_quantity)}
-// 				]);	
-// 			//For all items that are well stocked, the row will display in cyan
-// 			} else {
-// 				allItems.push([
-// 					{hAlign: "center", content: clc.cyan(item.product_id)}, 
-// 					clc.cyan(item.product_name), 
-// 					clc.cyan(item.department_name), 
-// 					{hAlign: "right", content: clc.cyan("$" + item.price.toFixed(2))},
-// 					{hAlign: "right", content: clc.cyan(item.stock_quantity)}
-// 				]);
-// 			}
-// 		}
-// 		itemsForSelection.push("Go Back To Main");
-// 		console.log(clc.yellow("\nRows highlighted in yellow are low in inventory.\nRows highlighted in red are out of stock."));
-// 		//Prints the table
-// 		console.log(allItems.toString());
-// 		inquirer.prompt(
-// 			{
-// 				type: "list", 
-// 				name: "selection",
-// 				choices: itemsForSelection,
-// 				message: "Please select an item that you would like to add inventory to:"
-// 			}
-// 		).then(function(response){
-// 			if (response.selection === "Go Back To Main") {
-// 				mainDisplay();
-// 			} else {
-// 				console.log(response.selection);
-// 				var productId = response.selection.split(":");
-// 				console.log(productId)
-// 				var productIdTrim = productId[0].trim();
-// 				var productIdNum  = parseInt(productIdTrim);
-// 				console.log('productIdNum: ' + productIdNum);
-// 				inquirer.prompt(
-// 					{
-// 						type: "input",
-// 						name: "numToAdd",
-// 						message: "How many items would you like to add?",
-// 						validate: function(value) {
-// 							//input must be at least 0, less than or equal to stock available, and must be a number to be considered a valid input
-// 							if (isNaN(value) === false && value >= 0 && !value === false) {
-// 								return true;
-// 							//Message displays if user inputs value greater than the stock available before being reprompted
-// 							} else {
-// 								console.log("\nSorry, we ain't about that. Please enter a valid number.")
-// 								return false;
-// 							}
-// 						}
-// 					}
-// 				).then(function(quantityResponse) {
-// 					var x = productId[2].trim();
-// 					var newStock = parseInt(quantityResponse.numToAdd) + parseInt(x);
-// 					console.log("OK, we added " + quantityResponse.numToAdd + " items to the inventory.");
-// 					console.log("New stock is " + newStock);	
-// 					// console.log("================================");
-// 					// console.log("BEFORE CALLING UPDATEDB FUNCTION");
-// 					// console.log("================================");
-// 					// console.log("param 1 being passed which corresponds to new stock quantity: " + newStock + " || param 2 being passed which corresponds to id: " + productIdNum)
-// 					updateDB(newStock, productIdNum);
-// 					mainDisplay();
-// 				})
-// 			}
-// 		})
-// 	})
-// }
 
+//**********************************************************
+//UPDATEDB FUNCTION THAT ADDS INVENTORY TO EXISTING PRODUCTS 
+//**********************************************************
 
 //Function that updates the database which passes in the parameters that correspond to the new stock value and the product id of that item
 function updateDB(newNumber, id) {
-	//MySQL's query using the UPDATE table query
-	// console.log("\n================================");
-	// console.log("INSIDE THE UPDATEDB FUNCTION NOW")
-	// console.log("================================")
-	// console.log("newNumber: " + newNumber + " id: " + id);
-	// console.log("newNumber typeof: " + typeof newNumber + " id typeof: " + typeof id);
+	//MySQL's query using the UPDATE table query where stockquantity is the first number (newNumber) passed in and the id (id)
 	connection.query("UPDATE products SET stock_quantity = ? WHERE product_id = ?", [newNumber, id], function(err, res) {
 		console.log("Success, you've updated your inventory");
 		if (err) throw err;
+		//Goes back to the main display
 		mainDisplay();
 	})
 };
+//*********************************************************
 
 
-function x() {
-	inquirer.prompt(
+//****************************************************
+		//ADD NEW PRODUCT INTO INVENTORY 
+//****************************************************
+
+//Function that adds new product where one does not already exist
+function addProduct() {
+	inquirer.prompt([
 		{
-			name: "num1",
+			name: "product_name",
+			message: "What's the name of the new product?",
 			type: "input",
-			message: "first number"	
-		}
-	).then(function(res){
-		var num1 = res.num1;
-		inquirer.prompt(
-			{
-				name: "num2",
-				type: "input",
-				message: "second number"
+			//Validates user input to make sure value is not blank and that it is not a pure number
+			validate: function(value) {
+				if (value != "" && isNaN(value) === true) {
+					return true;
+				} else {
+					console.log("\nPlease enter valid product name.");
+					return false;
+				}
 			}
-		).then(function(response){
-			var num2 = res.num2;
-			updateDB(num1, num2)
-		});
-	});
+		},
+		{
+			name: "department_name",
+			message: "What department does the product belong to?",
+			type: "input",
+			//Validates user input to make sure value is not blank and that it is not a pure number
+			validate: function(value) {
+				if (value != "" && isNaN(value) === true) {
+					return true;
+				} else {
+					console.log("\nPlease enter valid department name.");
+					return false;
+				}
+			}
+		},
+		{
+			name: "price",
+			message: "What is the price of the product?",
+			type: "input",
+			//Validates user input to make sure value is a number, is not blank and is greater than or equal to 0
+			validate: function(value) {
+				if (isNaN(value) === false && value != "" && value >= 0) {
+					return true;
+				} else {
+					console.log("\nPlease enter valid number.")
+					return false;
+				}
+			} 
+		},
+		{
+			name: "stock_quantity",
+			message: "How much of the product do you want to add?",
+			type: "input",
+			//Validates user input to make sure value is a number, is not blank and is greater than or equal to 0
+			validate: function(value) {
+				if (isNaN(value) === false && value != "" && value >= 0) {
+					return true;
+				} else {
+					console.log("\nPlease enter valid number.")
+					return false;
+				}
+			}
+		}
+	]).then(function(response){
+		console.log("Thanks!");
+		var productName = response.product_name;
+		var departmentName = response.department_name;
+		var price = response.price;
+		var quantity = response.stock_quantity;
+		//Passes responses from user into the addProductDB function that will use that information to add the product at the correct price and quantity and department name into the DB
+		addProductDB(productName, departmentName, price, quantity);
+	})
 }
-// x();
-// updateDB(100, 3);
+//****************************************************
+
+
+//****************************************************
+	//FUNCTION THAT UPDATES THE DB WITH NEW PRODUCT 
+//****************************************************
+
+//Function that adds new product into the database using parameters passed in by the manager
+function addProductDB(productName, departmentName, price, quantity){
+	connection.query("INSERT INTO products (product_name,department_name,price,stock_quantity) VALUES ('" + productName + "','" + departmentName + "'," + price + "," + quantity +")");
+	console.log("Congratulations, you've added your new product");
+	buildTable();
+	mainDisplay();
+}
 
 //Starts program
 mainDisplay();

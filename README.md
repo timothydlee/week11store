@@ -9,5 +9,5 @@ bamazonManager allows the manager to see a display of all the items and their in
 
 I uploaded videos demonstrating the app to YouTube.
 
-bamazonCustomer: 
-bamazonManager: 
+bamazonCustomer: https://youtu.be/cOqxj72Jnbo
+bamazonManager: https://youtu.be/WwBz7cuJfe4

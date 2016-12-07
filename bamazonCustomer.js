@@ -64,15 +64,16 @@ function displayItems() {
 		if (err) throw err;
 		//Loops through the res, which is contained in an array
 		for(var i = 0; i<res.length; i++) {
+			var item = res[i];
 			//Stock has to be greater than 0 in order for the customer to see an available item
-			if (res[i].stock_quantity > 0) {
+			if (item.stock_quantity > 0) {
 				//Pushing to instance of table array
 				table.push([
-					{hAlign: "center", content: res[i].product_id}, 
-					res[i].product_name, 
-					res[i].department_name, 
-					{hAlign: "right", content: "$" + res[i].price.toFixed(2)},
-					{hAlign: "right", content: res[i].stock_quantity}
+					{hAlign: "center", content: item.product_id}, 
+					item.product_name, 
+					item.department_name, 
+					{hAlign: "right", content: "$" + item.price.toFixed(2)},
+					{hAlign: "right", content: item.stock_quantity}
 				]);
 			}
 		}
@@ -144,26 +145,51 @@ function userPrompt() {
 				var customerPrice = quantity * price;
 				//Product ID # of the item the user selected
 				var product_id = compare[compareIndex].product_id;
+				var department = compare[compareIndex].department_name;
 				console.log("Thank you! " + quantity + " of those costs $" + customerPrice.toFixed(2) + ". Thank you for your purchase!");
 				//New stock of the item less the amount that the user purchased
 				var newStock = compareStock - quantityResponse.quantity;
 				//Calls the updateDB function passing in the newStock amount and corresponding product ID
-				updateDB(newStock, product_id);
+				updateProductsDB(newStock, product_id);
 				// console.log("Old stock: " + compare[compareIndex].stock_quantity + " | Bought amount: " + quantityResponse.quantity + " | New stock : " + newStock);
+				// updateDepartmentsDB(customerPrice.toFixed(2), department)
+				inquirer.prompt(
+					{
+						name: "choice",
+						type: "list",
+						choices: ["Yes", "No"],
+						message: "Would you like to buy anything else?"
+					}
+				).then(function(yesOrNo) {
+					if(yesOrNo.choice === "Yes") {
+						userPrompt();
+					} else {
+						exit();
+					}
+				})
 			})
 		});
 	});
 }
 
 //Function that updates the database which passes in the parameters that correspond to the new stock value and the product id of that item
-function updateDB(newNumber, id) {
+function updateProductsDB(newNumber, id) {
 	//MySQL's query using the UPDATE table queryr 
 	connection.query("UPDATE products SET stock_quantity=? WHERE product_id = ?", [newNumber, id], function(err, res) {
 		if (err) throw err;
 		//Ends the connection
-		exit();
+		// exit();
 	})
 }
+
+// function updateDepartmentsDB(num, deptName){
+// 	console.log(num + " " + deptName);
+// 	connection.query("SELECT departments.total_sales FROM products INNER JOIN departments on " + deptName + "= departments.department_name", function (err, res) {
+// 		if (err) throw err;
+// 		console.log(res);
+// 		exit();
+// 	})
+// }
 
 //Starts program
 displayItems();

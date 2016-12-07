@@ -290,7 +290,7 @@ function addToInventory() {
 			type: "input",
 			//Validates the input to make sre that the input is a number and it's not blank
 			validate: function(value) {
-				if (isNaN(value) === false && value != "") {
+				if (isNaN(value) === false && value != "" && value >= 0) {
 					return true;
 				} else {
 					console.log("\nPlease enter a valid number.");
